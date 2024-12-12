@@ -7,7 +7,8 @@
 #   "python-dotenv",
 #   "seaborn",
 #   "matplotlib",
-#   "rich"
+#   "rich",
+#   "ipykernel"
 # ]
 # ///
 
