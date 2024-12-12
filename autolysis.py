@@ -6,7 +6,8 @@
 #   "requests",
 #   "python-dotenv",
 #   "seaborn",
-#   "matplotlib"
+#   "matplotlib",
+#   "rich"
 # ]
 # ///
 
