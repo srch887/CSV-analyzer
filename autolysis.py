@@ -108,7 +108,7 @@ def generate_code_corr_matrix(file_name_without_extension):
                 "model": "gpt-4o-mini",
                 "messages": [
                     {"role": "system", "content": "You are to generate a python code for the given task. Only output the code and nothing else. The code is run in an interperter so do not add the \"python\" command in the front."},
-                    {"role": "user", "content": "Generate python code to generate a correlation heatmap for a pandas dataframe named df using the seaborn library and save it in the \"./{}\" folder in png format. Make the folder if it does not exist. Make sure to consider only numeric data for calculations".format(file_name_without_extension, str(summary))}
+                    {"role": "user", "content": "Generate python code to generate a correlation heatmap for a pandas dataframe named df using the seaborn library and save it in the \"./{}\" folder in png format. Make the folder if it does not exist. Make sure to consider only numeric data for calculations. Don't try to visualize the graph as the code is not running in a jupyter notebook. Just save the file.".format(file_name_without_extension, str(summary))}
                 ]
             }
         )
@@ -132,7 +132,7 @@ def generate_missing_value_graph(file_name_without_extension):
                 "model": "gpt-4o-mini",
                 "messages": [
                     {"role": "system", "content": "You are to generate a python code for the given task. Only output the code and nothing else. The code is run in an interperter so do not add the \"python\" command in the front."},
-                    {"role": "user", "content": "Generate python code to generate a bar chart for showing the number of missing values for a pandas dataframe named df using the seaborn library and save it in the \"./{}\" folder in png format. Make the folder if it does not exist. The dataframe is already loaded so just provide the remaining code".format(file_name_without_extension)}
+                    {"role": "user", "content": "Generate python code to generate a bar chart for showing the number of missing values for a pandas dataframe named df using the seaborn library and save it in the \"./{}\" folder in png format. Make the folder if it does not exist. The dataframe is already loaded so just provide the remaining code. Don't try to visualize the graph as the code is not running in a jupyter notebook. Just save the file.".format(file_name_without_extension)}
                 ]
             }
         )
@@ -156,7 +156,7 @@ def generate_histograms(file_name_without_extension):
                 "model": "gpt-4o-mini",
                 "messages": [
                     {"role": "system", "content": "You are to generate a python code for the given task. Only output the code and nothing else. The code is run in an interperter so do not add the \"python\" command in the front."},
-                    {"role": "user", "content": "You have a dataframe df. Generate the code to plot the histograms of all individual columns and show them in a single image as tiles  using the seaborn and matplotlib libraries. Treat categorical and numerical columns accordingly. Ignore columns that have more than 25 categories altogether(No need to show any message). Save the plot in the \"./{}\" folder in png format. Make the folder if it does not exist. The dataframe is already loaded so just provide the remaining code".format(file_name_without_extension)}
+                    {"role": "user", "content": "You have a dataframe df. Generate the code to plot the histograms of all individual columns and show them in a single image as tiles  using the seaborn and matplotlib libraries. Treat categorical and numerical columns accordingly. Ignore columns that have more than 25 categories altogether(No need to show any message). Save the plot in the \"./{}\" folder in png format. Make the folder if it does not exist. The dataframe is already loaded so just provide the remaining code.  Don't try to visualize the graph as the code is not running in a jupyter notebook. Just save the file.".format(file_name_without_extension)}
                 ]
             }
         )
