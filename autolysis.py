@@ -177,7 +177,7 @@ def ask_llm_for_insights(summary):
     
 # Using an LLM to generate python code to create a correlation matrix heatmap
 @retry(reraise=True, stop=stop_after_attempt(5))
-def generate_code_corr_matrix(df, file_name_without_extension):
+def generate_corr_matrix(df, file_name_without_extension):
     """
     Generates a Correlation Heatmap for the input dataframe using LLM-generated code 
     
@@ -350,6 +350,9 @@ if __name__ == "__main__":
     df, summary = analyze_csv(file_name)
         
     file_name_without_extension = os.path.splitext(file_name)[0]
+
+    # Generate correlation matrix
+    generate_corr_matrix(df, file_name_without_extension)
         
     # Generating null value count graph
     # missing_val_graph_code = generate_missing_value_graph(file_name_without_extension)
