@@ -198,7 +198,7 @@ def generate_corr_matrix(df, file_name_without_extension):
     
     user_prompt =  (
         f"Generate Python code to generate a correlation heatmap for a pandas dataframe named df using the seaborn library "
-        f"and save it in the \"./{file_name_without_extension}\" folder as a 512x512 png image. "
+        f"and save it in the current folder as a 512x512 png image. "
         f"Make the folder if it does not exist. Make sure to consider only numeric data for calculations. Just save the file."
     )
     
@@ -245,7 +245,7 @@ def generate_box_plots(df, file_name_without_extension):
     
     logging.info("Generating box plots for numerical columns...")
     
-    os.makedirs(f"./{file_name_without_extension}", exist_ok=True)
+    # os.makedirs(f"./{file_name_without_extension}", exist_ok=True)
 
     # Identify numerical columns
     numerical_cols = df.select_dtypes(include=['number']).columns
@@ -264,7 +264,7 @@ def generate_box_plots(df, file_name_without_extension):
             plt.grid(axis='x', linestyle='--', alpha=0.7)
 
         # Save the plot to a file
-        output_path = os.path.join(f"./{file_name_without_extension}", "box_plots.png")
+        output_path = os.path.join(f"./box_plots.png")
         plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
