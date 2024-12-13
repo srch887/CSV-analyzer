@@ -177,13 +177,13 @@ def ask_llm_for_insights(summary):
     
 # Using an LLM to generate python code to create a correlation matrix heatmap
 @retry(reraise=True, stop=stop_after_attempt(5))
-def generate_corr_matrix(df, file_name):
+def generate_corr_matrix(df, file_name_without_extension):
     """
     Generates a Correlation Heatmap for the input dataframe using LLM-generated code 
     
     Args:
         df (pandas.DataFrame): Dataframe to analyse. The df is analysed using an LLM-generated code.
-        file_name (str): Self-explainatory
+        file_name_without_extension (str): Self-explainatory
 
     Raises:
         Exception: If the LLM API call fails or if the generated code encounters any errors 
@@ -198,7 +198,7 @@ def generate_corr_matrix(df, file_name):
     
     user_prompt =  (
         f"Generate Python code to generate a correlation heatmap for a pandas dataframe named df using the seaborn library "
-        f"and save it in the \"./{file_name}\" folder as a 512x512 png image. The image should be named \"correlation_heatmap.png\""
+        f"and save it in the \"./{file_name_without_extension}\" folder as a 512x512 png image. "
         f"Make the folder if it does not exist. Make sure to consider only numeric data for calculations. Just save the file."
     )
     
@@ -212,7 +212,7 @@ def generate_corr_matrix(df, file_name):
  
     
 # Using an LLM to generate python code to create histograms for all columns. Ignore columns with more than 25 categories
-def generate_histograms(df, file_name):
+def generate_histograms(df, file_name_without_extension):
     logging.info("Generating histograms for all columns...")
     
     sys_prompt = ("You are to generate a python code for the given task. Only output the code and nothing else." 
@@ -221,7 +221,7 @@ def generate_histograms(df, file_name):
     
     user_prompt = (f"You have a dataframe df. Generate the code to plot the histograms of all individual columns and show them in a single image as tiles using the seaborn and matplotlib libraries." 
                    f"Treat categorical and numerical columns accordingly. Ignore columns that have more than 15 categories altogether(No need to show any message)." 
-                   f"Also, show only 15 graphs at most in a 5x3 figure. Save the plot in the \"./{file_name}\" folder in png format."
+                   f"Also, show only 15 graphs at most in a 5x3 figure. Save the plot in the \"./{file_name_without_extension}\" folder in png format."
                    f"Make the folder if it does not exist. The dataframe is already loaded so just provide the remaining code."
                    f"Don't try to visualize the graph as the code is not running in a jupyter notebook."
                 )
@@ -234,18 +234,18 @@ def generate_histograms(df, file_name):
     
 
 # Generate box-plots for all numerical columns
-def generate_box_plots(df, file_name):
+def generate_box_plots(df, file_name_without_extension):
     """
     Generates Box plots for all numerical columns for an input dataframe and store them in a location
 
     Args:
         df (pandas.DataFrame): Dataframe to analyse
-        file_name (str): Self-explainatory
+        file_name_without_extension (str): Self-explainatory
     """
     
     logging.info("Generating box plots for numerical columns...")
     
-    os.makedirs(f"./{file_name}", exist_ok=True)
+    os.makedirs(f"./{file_name_without_extension}", exist_ok=True)
 
     # Identify numerical columns
     numerical_cols = df.select_dtypes(include=['number']).columns
@@ -264,7 +264,7 @@ def generate_box_plots(df, file_name):
             plt.grid(axis='x', linestyle='--', alpha=0.7)
 
         # Save the plot to a file
-        output_path = os.path.join(f"./{file_name}", "box_plots.png")
+        output_path = os.path.join(f"./{file_name_without_extension}", "box_plots.png")
         plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
@@ -317,10 +317,10 @@ if __name__ == "__main__":
     
     df, summary = analyze_csv(file_name)
         
-    # file_name = os.path.splitext(file_name)[0]
+    file_name_without_extension = os.path.splitext(file_name)[0]
         
     # Generate correlation matrix
-    generate_corr_matrix(df, file_name)
+    generate_corr_matrix(df, file_name_without_extension)
         
     # # Generating histograms
     # generate_histograms_code = generate_histograms(file_name)
@@ -330,11 +330,11 @@ if __name__ == "__main__":
     # except Exception as e:
     #     logging.error("Error executing generated code: %s", e)
     
-    generate_box_plots(df, file_name)
+    generate_box_plots(df, file_name_without_extension)
         
     # Generating insights
     insights = ask_llm_for_insights(summary)
     
-    create_readme(insights, file_name)
+    create_readme(insights, file_name_without_extension)
     
     logging.info("Analysis successful")
