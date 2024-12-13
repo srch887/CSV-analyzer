@@ -285,7 +285,7 @@ def generate_box_plots(df, file_name_without_extension):
 
         # Save the plot to a file
         output_path = os.path.join(f"./{file_name_without_extension}", "box_plots.png")
-        plt.tight_layout()
+        # plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
     
