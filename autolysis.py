@@ -45,6 +45,16 @@ LLM_HEADER = {"Authorization": f"Bearer {token}"}
 
 # Capture basic information regarding the dataset like dimensions, column names, datatypes and null value count
 def capture_info(dataframe):
+    """
+    Capture information on the dataset like dimensions, column names, datatypes and null value count
+
+    Args:
+        dataframe (pandas.DataFrame): Dataframe to be summarized
+
+    Returns:
+        dict : Python dictionary containing all summarized information pertaining to the dataset
+    """
+    
     info_dict = {
         "num_rows": len(dataframe),
         "num_columns": len(dataframe.columns),
@@ -112,13 +122,14 @@ def analyze_csv(file_path):
 
 
 # Call LLM API
-def make_llm_api_call(sys_prompt, user_prompt):
+def make_llm_api_call(sys_prompt, user_prompt, image_encoded_dict = None):
     """
     Makes API calls to the OpenAI LLM API
 
     Args:
         sys_prompt (str): System prompt to be passed to the LLM
         user_prompt (str): User prompt to be passed to the LLM
+        image_encoded_dict (dict) [optional]: Dictionary containing image details for LLM visualization
 
     Raises:
         ValueError: Raise error in case of an unexpected API response format
@@ -129,16 +140,27 @@ def make_llm_api_call(sys_prompt, user_prompt):
         str: LLM-generated API response
     """
     
+    messages = [
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": [
+                        {
+                            "type": "text", 
+                            "text": user_prompt
+                        },
+                    ]}
+                ]
+    
+    if(image_encoded_dict is not None):
+        messages[1]["content"].append(image_encoded_dict)
+        
+    
     try:
         response = requests.post(
             url=LLM_URL,
             headers=LLM_HEADER,
             json={
                 "model": "gpt-4o-mini",
-                "messages": [
-                    {"role": "system", "content": sys_prompt},
-                    {"role": "user", "content": user_prompt}
-                ]
+                "messages": messages
             }
         )
         
@@ -172,13 +194,8 @@ def ask_llm_for_insights(summary):
             - 'data_types': Data types of the columns.
             - 'non_null_count': Count of non-null values per column. 
 
-    Raises:
-        ValueError: Raise error in case of an unexpected API response format
-        RequestException: Raise an HTTPError for bad responses (4xx and 5xx)
-        Exception: If the LLM API call fails, the exception is propagated
-
     Returns:
-        str: LLM-generated insights
+        str: LLM-generated insights. The insights are generated in a markup format for display in a *.md file.
     """
     
     logging.info("Generating insights...")
@@ -193,46 +210,15 @@ def ask_llm_for_insights(summary):
     # Encode the image data to base64
     base64_image = base64.b64encode(image_data).decode('utf-8')
 
-    try:
-        response = requests.post(
-            url=LLM_URL,
-            headers=LLM_HEADER,
-            json={
-                "model": "gpt-4o-mini",
-                "messages": [
-                    {"role": "system", "content": sys_prompt},
-                    {"role": "user", "content": [
-                        {
-                            "type": "text", 
-                            "text": str(summary)
-                        }, 
-                        {
-                            "type": "image_url", 
-                            "image_url": { 
-                                "url": f"data:image/png;base64,{base64_image}",
-                                "detail": "low"
-                            }
+    image_details = {
+                        "type": "image_url", 
+                        "image_url": { 
+                            "url": f"data:image/png;base64,{base64_image}",
+                            "detail": "low"
                         }
-                    ]}
-                ]
-            }
-        )
-        
-        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
-        
-        result = response.json()
-        
-        if "choices" in result and result["choices"]:
-            return result["choices"][0]["message"]["content"]
-        else:
-            logging.error("Invalid response format from LLM API: %s", result)
-            raise ValueError("Unexpected response format from LLM API.")
-    except requests.RequestException as e:
-        logging.error("Network error while communicating with LLM API: %s", e)
-        raise
-    except Exception as e:
-        logging.error("Unexpected error during LLM API call: %s", e)
-        raise
+                    }
+
+    return make_llm_api_call(sys_prompt, str(summary), image_details)
     
 # Using an LLM to generate python code to create a correlation matrix heatmap
 @retry(reraise=True, stop=stop_after_attempt(5))
