@@ -275,7 +275,7 @@ def generate_box_plots(df, file_name_without_extension):
     # Check if there are numerical columns
     if len(numerical_cols) > 0:
         # Set up the figure size and grid
-        plt.figure(figsize=(15, len(numerical_cols) * 3))
+        # plt.figure(figsize=(15, len(numerical_cols) * 3))
         
         # Generate box plots
         for i, col in enumerate(numerical_cols, start=1):
