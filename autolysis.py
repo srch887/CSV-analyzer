@@ -24,6 +24,7 @@ import sys
 import requests
 from tenacity import retry, stop_after_attempt
 from dotenv import load_dotenv
+import base64
 
 load_dotenv()
 
@@ -159,21 +160,79 @@ def make_llm_api_call(sys_prompt, user_prompt):
 
 
 # Generate insights with the help of an LLM using the summary
-@retry(reraise=True, stop=stop_after_attempt(3))
+@retry(reraise=True, stop=stop_after_attempt(5))
 def ask_llm_for_insights(summary):
+    """
+    Makes API calls to the OpenAI LLM API to generate data insights using the data summary and correlation heatmap as references.
+    The input *.png images are encoded in base64 format to pass the image ure in the API accordingly.
+
+    Args:
+        summary (dict): A dictionary containing metadata about the dataframe, including:
+            - 'columns': List of column names.
+            - 'data_types': Data types of the columns.
+            - 'non_null_count': Count of non-null values per column. 
+
+    Raises:
+        ValueError: Raise error in case of an unexpected API response format
+        RequestException: Raise an HTTPError for bad responses (4xx and 5xx)
+        Exception: If the LLM API call fails, the exception is propagated
+
+    Returns:
+        str: LLM-generated insights
+    """
+    
     logging.info("Generating insights...")
 
-    sys_prompt = ("Analyze the following dataset summary and provide key insights." 
+    sys_prompt = ("Analyze the following dataset summary and provide key insights and actionable recommendations." 
         "Write the output in markup format so that it can be properly viewed in a .md file"
     )
+    
+    with open('correlation_heatmap.png', 'rb') as image_file:
+        image_data = image_file.read()
+
+    # Encode the image data to base64
+    base64_image = base64.b64encode(image_data).decode('utf-8')
 
     try:
-        insight = make_llm_api_call(sys_prompt, str(summary))
+        response = requests.post(
+            url=LLM_URL,
+            headers=LLM_HEADER,
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": [
+                        {
+                            "type": "text", 
+                            "text": str(summary)
+                        }, 
+                        {
+                            "type": "image_url", 
+                            "image_url": { 
+                                "url": f"data:image/png;base64,{base64_image}",
+                                "detail": "low"
+                            }
+                        }
+                    ]}
+                ]
+            }
+        )
         
-        return insight
+        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
+        
+        result = response.json()
+        
+        if "choices" in result and result["choices"]:
+            return result["choices"][0]["message"]["content"]
+        else:
+            logging.error("Invalid response format from LLM API: %s", result)
+            raise ValueError("Unexpected response format from LLM API.")
+    except requests.RequestException as e:
+        logging.error("Network error while communicating with LLM API: %s", e)
+        raise
     except Exception as e:
-        logging.error("Error communicating with LLM: %s", e)
-        return "No insights available."
+        logging.error("Unexpected error during LLM API call: %s", e)
+        raise
     
 # Using an LLM to generate python code to create a correlation matrix heatmap
 @retry(reraise=True, stop=stop_after_attempt(5))
@@ -183,7 +242,6 @@ def generate_corr_matrix(df):
     
     Args:
         df (pandas.DataFrame): Dataframe to analyse. The df is analysed using an LLM-generated code.
-        file_name_without_extension (str): Self-explainatory
 
     Raises:
         Exception: If the LLM API call fails or if the generated code encounters any errors 
@@ -198,8 +256,8 @@ def generate_corr_matrix(df):
     
     user_prompt =  (
         f"Generate Python code to generate a correlation heatmap for a pandas dataframe named df using the seaborn library "
-        f"and save it in the current folder as a 512x512 png image. "
-        f"Make the folder if it does not exist. Make sure to consider only numeric data for calculations. Just save the file."
+        f"and save it in the current folder as a 512x512 png image named \"correlation_heatmap.png\". "
+        f"Make sure to consider only numeric data for calculations. Just save the file."
     )
     
     try:
@@ -218,7 +276,6 @@ def generate_box_plots(df):
 
     Args:
         df (pandas.DataFrame): Dataframe to analyse
-        file_name_without_extension (str): Self-explainatory
     """
     
     logging.info("Generating box plots for numerical columns...")
