@@ -215,12 +215,12 @@ def generate_missing_value_graph(file_name_without_extension):
     
     sys_prompt = ("You are to generate a python code for the given task. Only output the code and nothing else." 
         "The code is run in an interperter so do not add the \"python\" command in the front."
-        "Don't try to visualize the graph as the code is not running in a jupyter notebook."
     )
     
     user_prompt = (f"Generate python code to generate a bar chart for showing the number of missing values for a pandas dataframe named df using the seaborn library."
         f"Save it in the \"./{file_name_without_extension}\" folder in png format. Make the folder if it does not exist." 
         f"The dataframe is already loaded so just provide the remaining code. Just save the file."
+        f"Don't try to visualize the graph as the code is not running in a jupyter notebook."
     )
     
     try:
@@ -237,13 +237,14 @@ def generate_histograms(df, file_name_without_extension):
     
     sys_prompt = ("You are to generate a python code for the given task. Only output the code and nothing else." 
         "The code is run in an interperter so do not add the \"python\" command in the front."
-        "Don't try to visualize the graph as the code is not running in a jupyter notebook."
     )
     
     user_prompt = (f"You have a dataframe df. Generate the code to plot the histograms of all individual columns and show them in a single image as tiles using the seaborn and matplotlib libraries." 
                    f"Treat categorical and numerical columns accordingly. Ignore columns that have more than 15 categories altogether(No need to show any message)." 
                    f"Also, show only 15 graphs at most in a 5x3 figure. Save the plot in the \"./{file_name_without_extension}\" folder in png format."
-                   f"Make the folder if it does not exist. The dataframe is already loaded so just provide the remaining code.")
+                   f"Make the folder if it does not exist. The dataframe is already loaded so just provide the remaining code."
+                   f"Don't try to visualize the graph as the code is not running in a jupyter notebook."
+                )
     
     try: 
         return make_llm_api_call(sys_prompt, user_prompt)
