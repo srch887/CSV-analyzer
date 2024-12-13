@@ -340,12 +340,12 @@ if __name__ == "__main__":
     file_name_without_extension = os.path.splitext(file_name)[0]
         
     # Generating null value count graph
-    missing_val_graph_code = generate_missing_value_graph(file_name_without_extension)
+    # missing_val_graph_code = generate_missing_value_graph(file_name_without_extension)
     
-    try:
-        exec(missing_val_graph_code)
-    except Exception as e:
-        logging.error("Error executing generated code: %s", e)
+    # try:
+    #     exec(missing_val_graph_code)
+    # except Exception as e:
+    #     logging.error("Error executing generated code: %s", e)
         
     # # Generating histograms
     # generate_histograms_code = generate_histograms(file_name_without_extension)
