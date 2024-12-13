@@ -177,7 +177,7 @@ def ask_llm_for_insights(summary):
     
 # Using an LLM to generate python code to create a correlation matrix heatmap
 @retry(reraise=True, stop=stop_after_attempt(5))
-def generate_corr_matrix(df, file_name_without_extension):
+def generate_corr_matrix(df):
     """
     Generates a Correlation Heatmap for the input dataframe using LLM-generated code 
     
@@ -198,7 +198,7 @@ def generate_corr_matrix(df, file_name_without_extension):
     
     user_prompt =  (
         f"Generate Python code to generate a correlation heatmap for a pandas dataframe named df using the seaborn library "
-        f"and save it in the \"./{file_name_without_extension}\" folder as a 512x512 png image. "
+        f"and save it in the current folder as a 512x512 png image. "
         f"Make the folder if it does not exist. Make sure to consider only numeric data for calculations. Just save the file."
     )
     
@@ -210,54 +210,9 @@ def generate_corr_matrix(df, file_name_without_extension):
         logging.error("Error executing generated code: %s", e)
         raise
     
-    
-# Using an LLM to generate python code to create a bar chart showing all null value counts
-@retry(reraise=True, stop=stop_after_attempt(5))
-def generate_missing_value_graph(file_name_without_extension):
-    logging.info("Generating graph to count missing values...")
-    
-    sys_prompt = ("You are to generate a python code for the given task. Only output the code and nothing else." 
-        "The code is run in an interperter so do not add the \"python\" command in the front."
-    )
-    
-    user_prompt = (f"Generate python code to generate a bar chart for showing the number of missing values for a pandas dataframe named df using the seaborn library."
-        f"Save it in the \"./{file_name_without_extension}\" folder in png format. Make the folder if it does not exist." 
-        f"The dataframe is already loaded so just provide the remaining code. Just save the file."
-        f"Don't try to visualize the graph as the code is not running in a jupyter notebook."
-    )
-    
-    try:
-        return make_llm_api_call(sys_prompt, user_prompt)
-    
-    except Exception as e:
-        logging.error("Error communicating with LLM: %s", e)
-        return "No insights available."
- 
-    
-# Using an LLM to generate python code to create histograms for all columns. Ignore columns with more than 25 categories
-def generate_histograms(df, file_name_without_extension):
-    logging.info("Generating histograms for all columns...")
-    
-    sys_prompt = ("You are to generate a python code for the given task. Only output the code and nothing else." 
-        "The code is run in an interperter so do not add the \"python\" command in the front."
-    )
-    
-    user_prompt = (f"You have a dataframe df. Generate the code to plot the histograms of all individual columns and show them in a single image as tiles using the seaborn and matplotlib libraries." 
-                   f"Treat categorical and numerical columns accordingly. Ignore columns that have more than 15 categories altogether(No need to show any message)." 
-                   f"Also, show only 15 graphs at most in a 5x3 figure. Save the plot in the \"./{file_name_without_extension}\" folder in png format."
-                   f"Make the folder if it does not exist. The dataframe is already loaded so just provide the remaining code."
-                   f"Don't try to visualize the graph as the code is not running in a jupyter notebook."
-                )
-    
-    try: 
-        return make_llm_api_call(sys_prompt, user_prompt)
-    except Exception as e:
-        logging.error("Error communicating with LLM: %s", e)
-        return "No insights available."
-    
 
 # Generate box-plots for all numerical columns
-def generate_box_plots(df, file_name_without_extension):
+def generate_box_plots(df):
     """
     Generates Box plots for all numerical columns for an input dataframe and store them in a location
 
@@ -267,8 +222,6 @@ def generate_box_plots(df, file_name_without_extension):
     """
     
     logging.info("Generating box plots for numerical columns...")
-    
-    os.makedirs(f"./{file_name_without_extension}", exist_ok=True)
 
     # Identify numerical columns
     numerical_cols = df.select_dtypes(include=['number']).columns
@@ -287,14 +240,14 @@ def generate_box_plots(df, file_name_without_extension):
             plt.grid(axis='x', linestyle='--', alpha=0.7)
 
         # Save the plot to a file
-        output_path = os.path.join(f"./{file_name_without_extension}", "box_plots.png")
+        output_path = "./box_plots.png"
         plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
     
     
 # Output all insights into a readme file
-def create_readme(insights, output_dir):
+def create_readme(insights):
     """
     Generates a Markdown file with insights and saves it in the specified directory.
     
@@ -313,11 +266,8 @@ def create_readme(insights, output_dir):
     """
 
     try:
-        # Ensure the output directory exists
-        os.makedirs(output_dir, exist_ok=True)
-
         # Construct the output file path
-        output_file = os.path.join(output_dir, "README.md")
+        output_file = "./README.md"
 
         # Write insights to the file
         with open(output_file, "w", encoding="utf-8") as f:
@@ -343,29 +293,13 @@ if __name__ == "__main__":
     file_name_without_extension = os.path.splitext(file_name)[0]
         
     # Generate correlation matrix
-    generate_corr_matrix(df, file_name_without_extension)
-        
-    # Generating null value count graph
-    # missing_val_graph_code = generate_missing_value_graph(file_name_without_extension)
+    generate_corr_matrix(df)
     
-    # try:
-    #     exec(missing_val_graph_code)
-    # except Exception as e:
-    #     logging.error("Error executing generated code: %s", e)
-        
-    # # Generating histograms
-    # generate_histograms_code = generate_histograms(file_name_without_extension)
-    
-    # try:
-    #     exec(generate_histograms_code)
-    # except Exception as e:
-    #     logging.error("Error executing generated code: %s", e)
-    
-    generate_box_plots(df, file_name_without_extension)
+    generate_box_plots(df)
         
     # Generating insights
     insights = ask_llm_for_insights(summary)
     
-    create_readme(insights, file_name_without_extension)
+    create_readme(insights)
     
     logging.info("Analysis successful")
