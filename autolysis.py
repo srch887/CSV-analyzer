@@ -16,7 +16,7 @@ matplotlib.use('Agg')
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
+import seaborn
 import matplotlib.pyplot as plt
 import logging
 import os
@@ -177,13 +177,13 @@ def ask_llm_for_insights(summary):
     
 # Using an LLM to generate python code to create a correlation matrix heatmap
 @retry(reraise=True, stop=stop_after_attempt(5))
-def generate_corr_matrix(df, file_name_without_extension):
+def generate_corr_matrix(df, file_name):
     """
     Generates a Correlation Heatmap for the input dataframe using LLM-generated code 
     
     Args:
         df (pandas.DataFrame): Dataframe to analyse. The df is analysed using an LLM-generated code.
-        file_name_without_extension (str): Self-explainatory
+        file_name (str): Self-explainatory
 
     Raises:
         Exception: If the LLM API call fails or if the generated code encounters any errors 
@@ -198,7 +198,7 @@ def generate_corr_matrix(df, file_name_without_extension):
     
     user_prompt =  (
         f"Generate Python code to generate a correlation heatmap for a pandas dataframe named df using the seaborn library "
-        f"and save it in the \"./{file_name_without_extension}\" folder as a 512x512 png image. "
+        f"and save it in the \"./{file_name}\" folder as a 512x512 png image. The image should be named \"correlation_heatmap.png\""
         f"Make the folder if it does not exist. Make sure to consider only numeric data for calculations. Just save the file."
     )
     
@@ -209,33 +209,10 @@ def generate_corr_matrix(df, file_name_without_extension):
     except Exception as e:
         logging.error("Error executing generated code: %s", e)
         raise
-    
-    
-# Using an LLM to generate python code to create a bar chart showing all null value counts
-@retry(reraise=True, stop=stop_after_attempt(5))
-def generate_missing_value_graph(file_name_without_extension):
-    logging.info("Generating graph to count missing values...")
-    
-    sys_prompt = ("You are to generate a python code for the given task. Only output the code and nothing else." 
-        "The code is run in an interperter so do not add the \"python\" command in the front."
-    )
-    
-    user_prompt = (f"Generate python code to generate a bar chart for showing the number of missing values for a pandas dataframe named df using the seaborn library."
-        f"Save it in the \"./{file_name_without_extension}\" folder in png format. Make the folder if it does not exist." 
-        f"The dataframe is already loaded so just provide the remaining code. Just save the file."
-        f"Don't try to visualize the graph as the code is not running in a jupyter notebook."
-    )
-    
-    try:
-        return make_llm_api_call(sys_prompt, user_prompt)
-    
-    except Exception as e:
-        logging.error("Error communicating with LLM: %s", e)
-        return "No insights available."
  
     
 # Using an LLM to generate python code to create histograms for all columns. Ignore columns with more than 25 categories
-def generate_histograms(df, file_name_without_extension):
+def generate_histograms(df, file_name):
     logging.info("Generating histograms for all columns...")
     
     sys_prompt = ("You are to generate a python code for the given task. Only output the code and nothing else." 
@@ -244,7 +221,7 @@ def generate_histograms(df, file_name_without_extension):
     
     user_prompt = (f"You have a dataframe df. Generate the code to plot the histograms of all individual columns and show them in a single image as tiles using the seaborn and matplotlib libraries." 
                    f"Treat categorical and numerical columns accordingly. Ignore columns that have more than 15 categories altogether(No need to show any message)." 
-                   f"Also, show only 15 graphs at most in a 5x3 figure. Save the plot in the \"./{file_name_without_extension}\" folder in png format."
+                   f"Also, show only 15 graphs at most in a 5x3 figure. Save the plot in the \"./{file_name}\" folder in png format."
                    f"Make the folder if it does not exist. The dataframe is already loaded so just provide the remaining code."
                    f"Don't try to visualize the graph as the code is not running in a jupyter notebook."
                 )
@@ -257,18 +234,18 @@ def generate_histograms(df, file_name_without_extension):
     
 
 # Generate box-plots for all numerical columns
-def generate_box_plots(df, file_name_without_extension):
+def generate_box_plots(df, file_name):
     """
     Generates Box plots for all numerical columns for an input dataframe and store them in a location
 
     Args:
         df (pandas.DataFrame): Dataframe to analyse
-        file_name_without_extension (str): Self-explainatory
+        file_name (str): Self-explainatory
     """
     
     logging.info("Generating box plots for numerical columns...")
-
-    os.makedirs(f"./{file_name_without_extension}", exist_ok=True)
+    
+    os.makedirs(f"./{file_name}", exist_ok=True)
 
     # Identify numerical columns
     numerical_cols = df.select_dtypes(include=['number']).columns
@@ -276,28 +253,19 @@ def generate_box_plots(df, file_name_without_extension):
     # Check if there are numerical columns
     if len(numerical_cols) > 0:
         # Set up the figure size and grid
-        num_plots = len(numerical_cols)
-        fig, axes = plt.subplots(nrows=num_plots, ncols=1, figsize=(15, num_plots * 3))
-
-        # Handle single plot case
-        if num_plots == 1:
-            axes = [axes]
-
+        plt.figure(figsize=(15, len(numerical_cols) * 3))
+        
         # Generate box plots
-        for ax, col in zip(axes, numerical_cols):
-            sns.boxplot(
-                x=df[col].dropna(),
-                ax=ax,
-                color='skyblue',
-                orient='h'
-            )
-            ax.set_title(f"Box Plot: {col}", fontsize=12)
-            ax.set_xlabel(col, fontsize=10)
-            ax.grid(axis='x', linestyle='--', alpha=0.7)
+        for i, col in enumerate(numerical_cols, start=1):
+            plt.subplot(len(numerical_cols), 1, i)
+            plt.boxplot(df[col].dropna(), vert=False, patch_artist=True, boxprops=dict(facecolor='skyblue'))
+            plt.title(f"Box Plot: {col}", fontsize=12)
+            plt.xlabel(col, fontsize=10)
+            plt.grid(axis='x', linestyle='--', alpha=0.7)
 
-        # Adjust layout and save the plot to a file
+        # Save the plot to a file
+        output_path = os.path.join(f"./{file_name}", "box_plots.png")
         plt.tight_layout()
-        output_path = os.path.join(f"./{file_name_without_extension}", "box_plots.png")
         plt.savefig(output_path)
         plt.close()
     
@@ -349,32 +317,24 @@ if __name__ == "__main__":
     
     df, summary = analyze_csv(file_name)
         
-    file_name_without_extension = os.path.splitext(file_name)[0]
-
-    # Generate correlation matrix
-    generate_corr_matrix(df, file_name_without_extension)
+    # file_name = os.path.splitext(file_name)[0]
         
-    # Generating null value count graph
-    # missing_val_graph_code = generate_missing_value_graph(file_name_without_extension)
-    
-    # try:
-    #     exec(missing_val_graph_code)
-    # except Exception as e:
-    #     logging.error("Error executing generated code: %s", e)
+    # Generate correlation matrix
+    generate_corr_matrix(df, file_name)
         
     # # Generating histograms
-    # generate_histograms_code = generate_histograms(file_name_without_extension)
+    # generate_histograms_code = generate_histograms(file_name)
     
     # try:
     #     exec(generate_histograms_code)
     # except Exception as e:
     #     logging.error("Error executing generated code: %s", e)
     
-    generate_box_plots(df, file_name_without_extension)
+    generate_box_plots(df, file_name)
         
     # Generating insights
     insights = ask_llm_for_insights(summary)
     
-    create_readme(insights, file_name_without_extension)
+    create_readme(insights, file_name)
     
     logging.info("Analysis successful")
