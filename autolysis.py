@@ -266,7 +266,7 @@ def generate_box_plots(df, file_name_without_extension):
     """
     
     logging.info("Generating box plots for numerical columns...")
-    
+
     os.makedirs(f"./{file_name_without_extension}", exist_ok=True)
 
     # Identify numerical columns
@@ -275,19 +275,28 @@ def generate_box_plots(df, file_name_without_extension):
     # Check if there are numerical columns
     if len(numerical_cols) > 0:
         # Set up the figure size and grid
-        # plt.figure(figsize=(15, len(numerical_cols) * 3))
-        
-        # Generate box plots
-        for i, col in enumerate(numerical_cols, start=1):
-            plt.subplot(len(numerical_cols), 1, i)
-            plt.boxplot(df[col].dropna(), vert=False, patch_artist=True, boxprops=dict(facecolor='skyblue'))
-            plt.title(f"Box Plot: {col}", fontsize=12)
-            plt.xlabel(col, fontsize=10)
-            plt.grid(axis='x', linestyle='--', alpha=0.7)
+        num_plots = len(numerical_cols)
+        fig, axes = plt.subplots(nrows=num_plots, ncols=1, figsize=(15, num_plots * 3))
 
-        # Save the plot to a file
+        # Handle single plot case
+        if num_plots == 1:
+            axes = [axes]
+
+        # Generate box plots
+        for ax, col in zip(axes, numerical_cols):
+            sns.boxplot(
+                x=df[col].dropna(),
+                ax=ax,
+                color='skyblue',
+                orient='h'
+            )
+            ax.set_title(f"Box Plot: {col}", fontsize=12)
+            ax.set_xlabel(col, fontsize=10)
+            ax.grid(axis='x', linestyle='--', alpha=0.7)
+
+        # Adjust layout and save the plot to a file
+        plt.tight_layout()
         output_path = os.path.join(f"./{file_name_without_extension}", "box_plots.png")
-        # plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
     
