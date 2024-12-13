@@ -200,7 +200,8 @@ def ask_llm_for_insights(summary):
     
     logging.info("Generating insights...")
 
-    sys_prompt = ("Analyze the following dataset summary and provide key insights and actionable recommendations." 
+    sys_prompt = ("Analyze the following dataset summary and provide key insights and actionable recommendations."
+        "Use any graphs, if provided with the prompt. " 
         "Write the output in markup format so that it can be properly viewed in a .md file"
     )
     
