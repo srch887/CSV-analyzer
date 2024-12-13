@@ -291,10 +291,10 @@ def create_readme(insights, output_dir):
 
     try:
         # Ensure the output directory exists
-        os.makedirs(output_dir, exist_ok=True)
+        # os.makedirs(output_dir, exist_ok=True)
 
         # Construct the output file path
-        output_file = os.path.join(output_dir, "README.md")
+        output_file = os.path.join("./README.md")
 
         # Write insights to the file
         with open(output_file, "w", encoding="utf-8") as f:
