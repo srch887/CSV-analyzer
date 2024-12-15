@@ -16,7 +16,7 @@ matplotlib.use('Agg')
 
 import numpy as np
 import pandas as pd
-import seaborn
+import seaborn as sns
 import matplotlib.pyplot as plt
 import logging
 import os
@@ -32,15 +32,15 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Load token from .env file
-token = os.environ["AIPROXY_TOKEN"]
+AIPROXY_TOKEN = os.environ["AIPROXY_TOKEN"]
 
-if(not token):
+if(not AIPROXY_TOKEN):
     logging.error("Error: Couldn't read AI Proxy Token")
     sys.exit(1)
 
 LLM_URL = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
 
-LLM_HEADER = {"Authorization": f"Bearer {token}"}
+LLM_HEADER = {"Authorization": f"Bearer {AIPROXY_TOKEN}"}
 
 
 # Capture basic information regarding the dataset like dimensions, column names, datatypes and null value count
@@ -180,46 +180,6 @@ def make_llm_api_call(sys_prompt, user_prompt, image_encoded_dict = None):
         logging.error("Unexpected error during LLM API call: %s", e)
         raise
 
-
-# Generate insights with the help of an LLM using the summary
-@retry(reraise=True, stop=stop_after_attempt(5))
-def ask_llm_for_insights(summary):
-    """
-    Makes API calls to the OpenAI LLM API to generate data insights using the data summary and correlation heatmap as references.
-    The input *.png images are encoded in base64 format to pass the image ure in the API accordingly.
-
-    Args:
-        summary (dict): A dictionary containing metadata about the dataframe, including:
-            - 'columns': List of column names.
-            - 'data_types': Data types of the columns.
-            - 'non_null_count': Count of non-null values per column. 
-
-    Returns:
-        str: LLM-generated insights. The insights are generated in a markup format for display in a *.md file.
-    """
-    
-    logging.info("Generating insights...")
-
-    sys_prompt = ("Analyze the following dataset summary and provide key insights and actionable recommendations."
-        "Use the correlation heatmap provided with the prompt" 
-        "Write the output in markup format so that it can be properly viewed in a .md file"
-    )
-    
-    with open('correlation_heatmap.png', 'rb') as image_file:
-        image_data = image_file.read()
-
-    # Encode the image data to base64
-    base64_image = base64.b64encode(image_data).decode('utf-8')
-
-    image_details = {
-                        "type": "image_url", 
-                        "image_url": { 
-                            "url": f"data:image/png;base64,{base64_image}",
-                            "detail": "low"
-                        }
-                    }
-
-    return make_llm_api_call(sys_prompt, str(summary), image_details)
     
 # Using an LLM to generate python code to create a correlation matrix heatmap
 @retry(reraise=True, stop=stop_after_attempt(5))
@@ -244,7 +204,7 @@ def generate_corr_matrix(df):
     user_prompt =  (
         f"Generate Python code to generate a correlation heatmap for a pandas dataframe named df using the seaborn library "
         f"and save it in the current folder as a 512x512 png image named \"correlation_heatmap.png\". "
-        f"Make sure to consider only numeric data for calculations. Just save the file."
+        f"Make sure to consider only numeric data for calculations. Ignore strings and other datatypes. Just save the file."
     )
     
     try:
@@ -290,6 +250,105 @@ def generate_box_plots(df):
         plt.close()
     
     
+# Generate histograms for all columns    
+def generate_histograms(df):
+    """
+    Generates histograms for all columns for an input dataframe and store them in a location
+
+    Args:
+        df (pandas.DataFrame): Dataframe to analyse
+    """
+    
+    logging.info("Generating histograms...")
+    
+    # Select numerical and categorical columns
+    numerical_columns = df.select_dtypes(include=['number']).columns
+    categorical_columns = df.select_dtypes(include=['object', 'category']).columns
+
+    # Initialize a list to store columns with more than 15 categories
+    ignored_columns = []
+    plot_columns = []
+
+    # Separate categorical columns based on the number of unique categories
+    for col in categorical_columns:
+        unique_categories = df[col].nunique()
+        if unique_categories > 15:
+            ignored_columns.append(col)
+        else:
+            plot_columns.append(col)
+
+    # Combine numerical and filtered categorical columns for plotting
+    all_columns = list(numerical_columns) + plot_columns
+
+    # Set up the grid layout for the plots (3 columns)
+    n_cols = 3
+    n_rows = -(-len(all_columns) // n_cols)  # Calculate rows needed, ceiling division
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5 * n_rows))
+    axes = axes.flatten()  # Flatten to iterate easily
+
+    # Plot the data
+    for i, col in enumerate(all_columns):
+        if col in numerical_columns:
+            # Plot histogram for numerical columns
+            sns.histplot(df[col], kde=True, ax=axes[i], bins=30, color='blue')
+            axes[i].set_title(f'Histogram of {col}')
+        else:
+            # Plot count plot for categorical columns
+            sns.countplot(data=df, x=col, order=df[col].value_counts().index, ax=axes[i])
+            axes[i].set_title(f'Distribution of {col}')
+            axes[i].tick_params(axis='x', rotation=45)
+
+    # Turn off unused subplots
+    for i in range(len(all_columns), len(axes)):
+        axes[i].axis('off')
+
+    # Adjust layout and save the figure
+    plt.tight_layout()
+    plt.savefig("histograms.png", dpi=300)
+        
+        
+# Generate insights with the help of an LLM using the summary
+@retry(reraise=True, stop=stop_after_attempt(3))
+def ask_llm_for_insights(summary):
+    """
+    Makes API calls to the OpenAI LLM API to generate data insights using the data summary and correlation heatmap as references.
+    The input *.png images are encoded in base64 format to pass the image ure in the API accordingly.
+
+    Args:
+        summary (dict): A dictionary containing metadata about the dataframe, including:
+            - 'columns': List of column names.
+            - 'data_types': Data types of the columns.
+            - 'non_null_count': Count of non-null values per column. 
+
+    Returns:
+        str: LLM-generated insights. The insights are generated in a markup format for display in a *.md file.
+    """
+    
+    logging.info("Generating insights...")
+
+    sys_prompt = ("Analyze the following dataset summary and provide key insights and actionable recommendations."
+        "Use the correlation heatmap provided with the prompt" 
+        "Write the output in markup format so that it can be properly viewed in a .md file"
+    )
+    
+    with open('correlation_heatmap.png', 'rb') as image_file:
+        image_data = image_file.read()
+
+    # Encode the image data to base64
+    base64_image = base64.b64encode(image_data).decode('utf-8')
+
+    image_details = {
+                        "type": "image_url", 
+                        "image_url": { 
+                            "url": f"data:image/png;base64,{base64_image}",
+                            "detail": "low"
+                        }
+                    }
+
+    return make_llm_api_call(sys_prompt, str(summary), image_details)        
+        
+        
 # Output all insights into a readme file
 def create_readme(insights):
     """
@@ -299,7 +358,7 @@ def create_readme(insights):
         insights (str): The content to be written to the README.md file. 
                         It should be a string formatted as Markdown.
         output_dir (str): The directory where the README.md file will be created.
-                          If the directory does not exist, it will be created.
+                        If the directory does not exist, it will be created.
     
     Raises:
         Exception: For any errors during file writing.
@@ -312,10 +371,12 @@ def create_readme(insights):
     try:
         # Construct the output file path
         output_file = "./README.md"
+        
+        clean_insights = insights.strip("```markdown\n")
 
         # Write insights to the file
         with open(output_file, "w", encoding="utf-8") as f:
-            f.write(insights)
+            f.write(clean_insights)
         
         logging.info(f"README.md created successfully at {output_file}")
     except Exception as e:
@@ -340,6 +401,8 @@ if __name__ == "__main__":
     generate_corr_matrix(df)
     
     generate_box_plots(df)
+    
+    generate_histograms(df)
         
     # Generating insights
     insights = ask_llm_for_insights(summary)
