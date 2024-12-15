@@ -362,10 +362,6 @@ def create_readme(insights):
     
     Raises:
         Exception: For any errors during file writing.
-    
-    Example:
-        >>> create_readme("# Insights\\n\\nThis is an analysis report.", "output")
-        Creates a README.md file in the `./output` directory with the provided content.
     """
 
     try:
